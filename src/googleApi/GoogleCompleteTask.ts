@@ -1,6 +1,6 @@
 import type GoogleTasksPlugin from "../GoogleTasksPlugin";
 import type { Task } from "../helper/types";
-import { getGoogleAuthToken } from "./GoogleAuth";
+import { googleFetch } from "./GoogleFetch";
 import { getOneTaskById } from "./ListAllTasks";
 import { createNotice } from "src/helper/NoticeHelper";
 
@@ -15,27 +15,22 @@ export async function GoogleCompleteTask(
 
 	task.children?.forEach(subTask => GoogleCompleteTask(plugin,subTask))
 
-	const requestHeaders: HeadersInit = new Headers();
-	requestHeaders.append(
-		"Authorization",
-		"Bearer " + (await getGoogleAuthToken(plugin))
-	);
-	requestHeaders.append("Content-Type", "application/json");
-
 	task.status = "completed";
 	task.completed = new Date().toISOString();
 	delete task.taskListName;
 
 	try {
-		const response = await fetch(task.selfLink,
+		const response = await googleFetch(plugin, task.selfLink,
 			{
 				method: "PUT",
-				headers: requestHeaders,
 				body: JSON.stringify(task),
 			}
 		);
-		await response.json();
+		if (!response.ok) {
+			throw new Error("HTTP " + response.status);
+		}
 	} catch (error) {
+		console.error(error);
 		createNotice(plugin, "Could not complete task");
 		return false;
 	}
@@ -59,28 +54,23 @@ export async function GoogleUnCompleteTask(
 	task: Task
 ): Promise<boolean> {
 
-	const requestHeaders: HeadersInit = new Headers();
-	requestHeaders.append(
-		"Authorization",
-		"Bearer " + (await getGoogleAuthToken(plugin))
-	);
-	requestHeaders.append("Content-Type", "application/json");
-
 	task.status = "needsAction";
 	delete task.completed;
 	delete task.taskListName;
 
 	try {
-		const response = await fetch(task.selfLink,
+		const response = await googleFetch(plugin, task.selfLink,
 			{
 				method: "PUT",
-				headers: requestHeaders,
 				body: JSON.stringify(task),
 			}
 		);
-		await response.json();
+		if (!response.ok) {
+			throw new Error("HTTP " + response.status);
+		}
 	} catch (error) {
-		createNotice(plugin, "Could not complete task");
+		console.error(error);
+		createNotice(plugin, "Could not uncomplete task");
 		return false;
 	}
 

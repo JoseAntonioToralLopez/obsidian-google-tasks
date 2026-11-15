@@ -1,7 +1,7 @@
 
 
 import TreeMap from "ts-treemap";
-import { getGoogleAuthToken } from "./GoogleAuth";
+import { googleFetch, safeId, TASKS_API } from "./GoogleFetch";
 import type GoogleTasks from "../GoogleTasksPlugin";
 import type {
 	Task,
@@ -14,22 +14,16 @@ export async function getOneTaskById(
 	plugin: GoogleTasks,
 	taskId: string
 ): Promise<Task> {
+	// The id usually comes from the text of a note
+	const id = safeId(taskId);
 	const taskLists = await getAllTaskLists(plugin);
-
-	const requestHeaders: HeadersInit = new Headers();
-	requestHeaders.append(
-		"Authorization",
-		"Bearer " + (await getGoogleAuthToken(plugin))
-	);
-	requestHeaders.append("Content-Type", "application/json");
 
 	for (let i = 0; i < taskLists.length; i++) {
 		try {
-			const response = await fetch(
-				`https://tasks.googleapis.com/tasks/v1/lists/${taskLists[i].id}/tasks/${taskId}`,
+			const response = await googleFetch(plugin, 
+				`${TASKS_API}/lists/${encodeURIComponent(taskLists[i].id)}/tasks/${id}`,
 				{
 					method: "GET",
-					headers: requestHeaders,
 				}
 			);
 			if (response.status == 200) {
@@ -51,26 +45,23 @@ export async function getOneTaskById(
 export async function getAllTaskLists(
 	plugin: GoogleTasks
 ): Promise<TaskList[]> {
-	const requestHeaders: HeadersInit = new Headers();
-	requestHeaders.append(
-		"Authorization",
-		"Bearer " + (await getGoogleAuthToken(plugin))
-	);
-	requestHeaders.append("Content-Type", "application/json");
-
 	try {
-		const response = await fetch(
-			`https://tasks.googleapis.com/tasks/v1/users/@me/lists`,
+		const response = await googleFetch(plugin, 
+			`${TASKS_API}/users/@me/lists`,
 			{
 				method: "GET",
-				headers: requestHeaders,
 				redirect: "follow",
 			}
 		);
 
+		if (!response.ok) {
+			console.error("Google Tasks: could not load the task lists", response.status);
+			return [];
+		}
+
 		const allTaskListsData: TaskListResponse = await response.json();
 
-		return allTaskListsData.items;
+		return allTaskListsData.items ?? [];
 	} catch (error) {
 		console.error(error);
 		return [];
@@ -92,7 +83,7 @@ export async function getAllTasksFromList(
 		let allTasksData: TaskResponse = undefined;
 
 		do {
-			let url = `https://tasks.googleapis.com/tasks/v1/lists/${taskListId}/tasks?`;
+			let url = `${TASKS_API}/lists/${encodeURIComponent(taskListId)}/tasks?`;
 			url += "maxResults=100";
 			url += "&showCompleted=true";
 			url += "&showAssigned=true";
@@ -111,20 +102,16 @@ export async function getAllTasksFromList(
 			}
 
 			if (allTasksData != undefined) {
-				url += `&pageToken=${allTasksData.nextPageToken}`;
+				url += `&pageToken=${encodeURIComponent(allTasksData.nextPageToken)}`;
 			}
 
-			const requestHeaders: HeadersInit = new Headers();
-			requestHeaders.append(
-				"Authorization",
-				"Bearer " + (await getGoogleAuthToken(plugin))
-			);
-			requestHeaders.append("Content-Type", "application/json");
-
-			const response = await fetch(url, {
+			const response = await googleFetch(plugin, url, {
 				'method': 'GET',
-				'headers': requestHeaders,
 			});
+
+			if (!response.ok) {
+				throw new Error("Could not load tasks: HTTP " + response.status);
+			}
 
 			allTasksData = await response.json();
 

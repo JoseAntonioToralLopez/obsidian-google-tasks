@@ -4,27 +4,19 @@ import { createNotice } from "src/helper/NoticeHelper";
 import type { Task } from "src/helper/types";
 import { GoogleTaskView, VIEW_TYPE_GOOGLE_TASK } from "src/view/GoogleTaskView";
 
-import { getGoogleAuthToken } from "./GoogleAuth";
+import { googleFetch } from "./GoogleFetch";
 
 export async function UpdateGoogleTask(
 	plugin: GoogleTasksPlugin,
 	task: Task
 ): Promise<boolean> {
 
-	const requestHeaders: HeadersInit = new Headers();
-	requestHeaders.append(
-		"Authorization",
-		"Bearer " + (await getGoogleAuthToken(plugin))
-	);
-	requestHeaders.append("Content-Type", "application/json");
-
 
 	try {
-		const response = await fetch(
+		const response = await googleFetch(plugin, 
 			`${task.selfLink}`,
 			{
 				method: "PATCH",
-				headers: requestHeaders,
 				body: JSON.stringify({
                     "title":task.title,
                     "notes": task.notes ?? "",
@@ -45,8 +37,10 @@ export async function UpdateGoogleTask(
                         leaf.view.onOpen();
                     }
                 });
+        } else {
+            throw new Error("HTTP " + response.status);
         }
-        
+
 	} catch (error) {
         console.log(error)
 		createNotice(plugin, "Could not update task");

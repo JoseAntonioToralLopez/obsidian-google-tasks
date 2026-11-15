@@ -1,7 +1,7 @@
 import { MarkdownRenderChild, Notice, setIcon } from "obsidian";
 import type GoogleTasks from "../GoogleTasksPlugin";
 import type { Task } from "../helper/types";
-import { getGoogleAuthToken } from "../googleApi/GoogleAuth";
+import { googleFetch } from "../googleApi/GoogleFetch";
 import { getAllTaskLists, getAllTasksFromList } from "../googleApi/ListAllTasks";
 import { settingsAreCompleteAndLoggedIn } from "./GoogleTasksSettingTab";
 import {
@@ -23,12 +23,8 @@ async function completeTask(plugin: GoogleTasks, task: Task): Promise<boolean> {
 	}
 
 	try {
-		const response = await fetch(task.selfLink, {
+		const response = await googleFetch(plugin, task.selfLink, {
 			method: "PATCH",
-			headers: {
-				Authorization: "Bearer " + (await getGoogleAuthToken(plugin)),
-				"Content-Type": "application/json",
-			},
 			body: JSON.stringify({ status: "completed" }),
 		});
 		return response.ok;

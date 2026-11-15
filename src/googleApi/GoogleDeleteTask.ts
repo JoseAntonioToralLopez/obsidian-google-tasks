@@ -1,4 +1,4 @@
-import { getGoogleAuthToken } from "./GoogleAuth";
+import { googleFetch } from "./GoogleFetch";
 import type GoogleTasks from "../GoogleTasksPlugin";
 import { createNotice } from "src/helper/NoticeHelper";
 
@@ -7,18 +7,10 @@ export async function DeleteGoogleTask(
 	selfLink: string,
 	showNotice = true
 ): Promise<boolean> {
-	const requestHeaders: HeadersInit = new Headers();
-	requestHeaders.append(
-		"Authorization",
-		"Bearer " + (await getGoogleAuthToken(plugin))
-	);
-	requestHeaders.append("Content-Type", "application/json");
-
 	try {
-		const response = await fetch(selfLink,
+		const response = await googleFetch(plugin, selfLink,
 			{
 				method: "DELETE",
-				headers: requestHeaders,
 			}
 		);
 		if (response.status == 204) {

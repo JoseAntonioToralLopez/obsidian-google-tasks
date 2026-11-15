@@ -1,4 +1,4 @@
-import { getGoogleAuthToken } from "./GoogleAuth";
+import { googleFetch, TASKS_API } from "./GoogleFetch";
 import type GoogleTasks from "../GoogleTasksPlugin";
 import { GoogleTaskView, VIEW_TYPE_GOOGLE_TASK } from "../view/GoogleTaskView";
 import type { Task, TaskInput } from "../helper/types";
@@ -8,13 +8,6 @@ export async function CreateGoogleTask(
 	plugin: GoogleTasks,
 	taskInput: TaskInput
 ) : Promise<Task>{
-	const requestHeaders: HeadersInit = new Headers();
-	requestHeaders.append(
-		"Authorization",
-		"Bearer " + (await getGoogleAuthToken(plugin))
-	);
-	requestHeaders.append("Content-Type", "application/json");
-
 	const createBody = {
 		title: taskInput.title,
 		notes: taskInput.details,
@@ -25,11 +18,10 @@ export async function CreateGoogleTask(
 		createBody.due = new Date(taskInput.due).toISOString();
 	}
 	try {
-		const response = await fetch(
-			`https://tasks.googleapis.com/tasks/v1/lists/${taskInput.taskListId}/tasks`,
+		const response = await googleFetch(plugin, 
+			`${TASKS_API}/lists/${encodeURIComponent(taskInput.taskListId)}/tasks`,
 			{
 				method: "POST",
-				headers: requestHeaders,
 				body: JSON.stringify(createBody),
 			}
 		);
@@ -61,13 +53,6 @@ export async function CreateGoogleTaskFromOldTask(
 	plugin: GoogleTasks,
 	newTask: Task
 ): Promise<boolean> {
-	const requestHeaders: HeadersInit = new Headers();
-	requestHeaders.append(
-		"Authorization",
-		"Bearer " + (await getGoogleAuthToken(plugin))
-	);
-	requestHeaders.append("Content-Type", "application/json");
-
 	const listId = newTask.parent;
 	delete newTask.parent;
 
@@ -76,11 +61,10 @@ export async function CreateGoogleTaskFromOldTask(
 	}
 
 	try {
-		const response = await fetch(
-			`https://tasks.googleapis.com/tasks/v1/lists/${listId}/tasks`,
+		const response = await googleFetch(plugin, 
+			`${TASKS_API}/lists/${encodeURIComponent(listId)}/tasks`,
 			{
 				method: "POST",
-				headers: requestHeaders,
 				body: JSON.stringify(newTask),
 			}
 		);
