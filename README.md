@@ -57,6 +57,28 @@ Manage your Google Tasks from inside Obsidian
     -   Press the plus button to create a new task
     -   Use the dropdown to switch between lists
 
+### Query blocks
+
+Add a `google-tasks` code block to any note (for example your daily note template) to show a live list of pending tasks. Nothing is written into the note: the block is rendered on the fly, refreshes with the interval from the settings, and ticking a task completes it in Google Tasks and removes it from the block.
+
+````
+```google-tasks
+list: Reading list
+due: today, overdue
+sort: due
+limit: 10
+```
+````
+
+| Option  | Values                                                                                                   |
+| ------- | -------------------------------------------------------------------------------------------------------- |
+| `list`  | One or more list names separated by commas. Default: every list                                          |
+| `due`   | `today`, `tomorrow`, `overdue`, `none`, `note` (date in the note's file name), `any` or `YYYY-MM-DD`       |
+| `sort`  | `due`, `title` or `list`, optionally followed by `desc`                                                  |
+| `limit` | Maximum number of tasks                                                                                  |
+
+Spanish aliases are accepted too (`lista`, `fecha: hoy, atrasadas, sin fecha, nota`, `orden`, `limite`). The command "Insert Google Tasks query block" inserts a sample block.
+
 ### Commands
 
 #### List Google Tasks

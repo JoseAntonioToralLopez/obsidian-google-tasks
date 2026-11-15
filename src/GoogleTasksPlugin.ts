@@ -16,6 +16,7 @@ import {
 import { normalize } from 'path';
 import { taskToList } from './helper/TaskToList';
 import { SelectInsertTaskModal } from './modal/SelectInsertTaskModal';
+import { registerTaskQueryBlock, TASK_QUERY_BLOCK } from './view/TaskQueryBlock';
 
 const DEFAULT_SETTINGS: GoogleTasksSettings = {
 	googleRefreshToken: "",
@@ -99,6 +100,19 @@ export default class GoogleTasks extends Plugin {
 			VIEW_TYPE_GOOGLE_TASK,
 			(leaf: WorkspaceLeaf) => new GoogleTaskView(leaf, this)
 		);
+
+		// Live ```google-tasks query blocks (e.g. inside daily notes)
+		registerTaskQueryBlock(this);
+
+		this.addCommand({
+			id: "insert-google-tasks-query",
+			name: "Insert Google Tasks query block",
+			editorCallback: (editor: Editor) => {
+				editor.replaceSelection(
+					"```" + TASK_QUERY_BLOCK + "\nlist: \ndue: today, overdue\nsort: due\n```\n"
+				);
+			},
+		});
 
 		this.addRibbonIcon(
 			"check-in-circle",

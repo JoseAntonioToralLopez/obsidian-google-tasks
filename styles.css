@@ -199,3 +199,58 @@ input[type="date"] {
 .googleTaskOverDue {
 	color: red;
 }
+
+/* ```google-tasks query block */
+.googleTaskQueryHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	/* blank line between the list name and the tasks */
+	margin-bottom: 1em;
+}
+
+.googleTaskQueryHeading {
+	font-weight: var(--font-semibold);
+}
+
+.googleTaskQuery ul.googleTaskQueryList {
+	list-style: none;
+	padding-left: 0;
+	margin: 0;
+}
+
+.googleTaskQuery ul.googleTaskQueryList ul.googleTaskQueryList {
+	padding-left: 1.6em;
+}
+
+.googleTaskQueryRow {
+	display: flex;
+	align-items: baseline;
+	gap: 0.5em;
+	padding: 2px 0;
+	cursor: pointer;
+}
+
+.googleTaskQueryTitle {
+	flex: 1;
+}
+
+.googleTaskQueryMeta {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+.googleTaskQueryMeta.googleTaskOverDue {
+	color: var(--text-error);
+}
+
+.googleTaskQueryEmpty {
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+.googleTaskQueryError {
+	color: var(--text-error);
+	white-space: pre-wrap;
+}
