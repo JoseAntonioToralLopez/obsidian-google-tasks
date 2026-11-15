@@ -39,8 +39,19 @@ export async function getGoogleAuthToken(plugin: GoogleTasks): Promise<string> {
 
 			const tokenData = await response.json();
 
+			if (!response.ok || !tokenData.access_token) {
+				// Keep the old values instead of storing "undefined" as a token
+				console.error(
+					"Google Tasks: could not refresh the access token",
+					response.status,
+					tokenData.error
+				);
+				return;
+			}
+
 			setAT(tokenData.access_token);
-			setET(+new Date() + tokenData.expires_in);
+			// expires_in is in seconds; renew one minute early
+			setET(+new Date() + (tokenData.expires_in - 60) * 1000);
 		}
 	}
 
