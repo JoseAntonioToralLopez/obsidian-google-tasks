@@ -13,7 +13,6 @@ import {
 	GoogleTasksSettingTab,
 	settingsAreCompleteAndLoggedIn,
 } from "./view/GoogleTasksSettingTab";
-import { normalize } from 'path';
 import { taskToList } from './helper/TaskToList';
 import { SelectInsertTaskModal } from './modal/SelectInsertTaskModal';
 import { registerTaskQueryBlock, TASK_QUERY_BLOCK } from './view/TaskQueryBlock';
@@ -31,7 +30,6 @@ export default class GoogleTasks extends Plugin {
 	settings: GoogleTasksSettings;
 	plugin: GoogleTasks;
 	showHidden = false;
-	openEvent: null;
 	initView = async () => {
 		if (
 			this.app.workspace.getLeavesOfType(VIEW_TYPE_GOOGLE_TASK).length ===
@@ -46,50 +44,51 @@ export default class GoogleTasks extends Plugin {
 		);
 	};
 
-	onLayoutReady = async() => {
-		
+	onLayoutReady = async () => {
+		// Sync the checkbox state of inserted tasks ("- [ ] ... %%id%%") when a note is opened
+		this.registerEvent(
+			this.app.workspace.on("file-open", async (file: TFile) => {
+				if (!file || file.extension !== "md") return;
+				if (!settingsAreCompleteAndLoggedIn(this, false)) return;
 
-		this.app.workspace.on("file-open", async (file:TFile) => {
-			if ( !file || file.extension !== "md") return;
-			let content = await this.app.vault.adapter.read(normalize(file.path));
-			if(!content.match("%%")) {
-				return;
-			}
-		
-			const matches = [...content.matchAll(/\- \[[ xX]\] .* %%[A-Za-z0-9]{22}%%/g)]
-			let updated = false;
-			for(let match of matches) {
-				let line = match[0];
-				const id = match[0].match(/%%[A-Za-z0-9]{22}%%/)[0].substring(2).slice(0,-2);
-				try{
-					const task = await getOneTaskById(this,id);
-					if(task.status === "completed") {
-						
-						const indexOfX = line.indexOf("- [ ]")
-					
-						if(indexOfX > -1){
-							line = line.replace("- [ ] ", "- [x] ")
+				const content = await this.app.vault.cachedRead(file);
+				if (!content.includes("%%")) return;
+
+				const matches = [...content.matchAll(/\- \[[ xX]\] .* %%[A-Za-z0-9]{22}%%/g)];
+				const changes = new Map<string, string>();
+
+				for (const match of matches) {
+					const oldLine = match[0];
+					const id = oldLine.match(/%%[A-Za-z0-9]{22}%%/)[0].slice(2, -2);
+					try {
+						const task = await getOneTaskById(this, id);
+						if (!task) continue;
+
+						const newLine =
+							task.status === "completed"
+								? oldLine.replace("- [ ] ", "- [x] ")
+								: oldLine.replace("- [x] ", "- [ ] ");
+						if (newLine !== oldLine) {
+							changes.set(oldLine, newLine);
 						}
-						
-					}else {
-						const indexOfX = line.indexOf("- [x] ")
-						if(indexOfX > -1){
-							line = line.replace("- [x] ", "- [ ] ")
-						}
+					} catch (err) {
+						console.error(err);
+						return;
 					}
-				}catch(err){
-					console.log(err);
-					return;
 				}
-				
-				content = content.replace(match[0], line);
-				updated = true;
-			}
-			if(updated) {
-				await this.app.vault.adapter.write(normalize(file.path), content);
-			}
-		})
-	}
+
+				if (changes.size === 0) return;
+
+				// Apply on the current content so edits made meanwhile are not overwritten
+				await this.app.vault.process(file, (data) => {
+					changes.forEach((newLine, oldLine) => {
+						data = data.replace(oldLine, () => newLine);
+					});
+					return data;
+				});
+			})
+		);
+	};
 
 	async onload() {
 		await this.loadSettings();
@@ -133,11 +132,13 @@ export default class GoogleTasks extends Plugin {
 			)
 				return;
 
-			const idElement = checkPointElement.parentElement.parentElement.querySelectorAll(
+			const idElement = checkPointElement.parentElement?.parentElement?.querySelectorAll(
 				".cm-comment.cm-list-1"
 			)[1] as HTMLElement;
 
-			const taskId = idElement.textContent;
+			// Ordinary checkboxes have no task id comment next to them
+			const taskId = idElement?.textContent ?? "";
+			if (!/^[A-Za-z0-9_-]{10,}$/.test(taskId)) return;
 
 			if (!settingsAreCompleteAndLoggedIn(this, false)) return;
 
@@ -295,7 +296,6 @@ export default class GoogleTasks extends Plugin {
 
 	onunload() {
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_GOOGLE_TASK);
-		this.app.vault.offref(this.openEvent);
 	}
 
 	async loadSettings() {
