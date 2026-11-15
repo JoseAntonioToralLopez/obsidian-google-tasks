@@ -400,7 +400,7 @@ createTaskElement(task:Task, containerEl: HTMLElement, isUnDoneList: boolean, is
 				() => {
 					this.updateFromServer()					
 				},
-				this.plugin.settings.refreshInterval * 1000
+				Math.max(this.plugin.settings.refreshInterval || 60, 10) * 1000
 			))
 		);
 	}

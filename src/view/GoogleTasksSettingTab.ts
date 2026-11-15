@@ -159,9 +159,10 @@ export class GoogleTasksSettingTab extends PluginSettingTab {
 		RefreshIntervalInput.min = "10";
 		RefreshIntervalInput.step = "1";
 		RefreshIntervalInput.addEventListener("input", async () => {
-			this.plugin.settings.refreshInterval = parseInt(
-				RefreshIntervalInput.value
-			);
+			const seconds = parseInt(RefreshIntervalInput.value);
+			// Ignore an empty or too small value while the user is typing
+			if (isNaN(seconds) || seconds < 10) return;
+			this.plugin.settings.refreshInterval = seconds;
 			this.app.workspace
 				.getLeavesOfType(VIEW_TYPE_GOOGLE_TASK)
 				.forEach((leaf) => {
