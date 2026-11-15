@@ -73,11 +73,16 @@ export async function LoginGoogle(plugin: GoogleTasks) {
 		);
 		// Random value echoed back by Google, so a callback we did not start is rejected
 		const state = require("crypto").randomBytes(32).toString("hex");
+		// PKCE: the authorization code is useless without this verifier
+		const { codeVerifier, codeChallenge } =
+			await oAuth2Client.generateCodeVerifierAsync();
 		const authorizeUrl = oAuth2Client.generateAuthUrl({
 			scope: "https://www.googleapis.com/auth/tasks",
 			access_type: "offline",
 			prompt: "consent",
 			state,
+			code_challenge: codeChallenge,
+			code_challenge_method: "S256",
 		});
 
 		const server = http
@@ -103,7 +108,7 @@ export async function LoginGoogle(plugin: GoogleTasks) {
 						server.destroy();
 
 						// Now that we have the code, use that to acquire tokens.
-						const r = await oAuth2Client.getToken(code);
+						const r = await oAuth2Client.getToken({ code, codeVerifier });
 
 						setRT(r.tokens.refresh_token);
 						setAT(r.tokens.access_token);
