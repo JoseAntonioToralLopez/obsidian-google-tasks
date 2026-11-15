@@ -81,7 +81,7 @@ limit: 10
 | `sort`  | `due`, `title` or `list`, optionally followed by `desc`                                                  |
 | `limit` | Maximum number of tasks                                                                                  |
 
-Spanish aliases are accepted too (`lista`, `fecha: hoy, atrasadas, sin fecha, nota`, `orden`, `limite`). The command "Insert Google Tasks query block" inserts a sample block.
+Keywords are English, with aliases in Spanish, French, German, Portuguese and Italian (for example `lista`, `fecha: hoy`, `fällig: heute`). They are matched without case or accents, and a language is added with one entry in `src/query/locales.ts`. The command "Insert Google Tasks query block" inserts a sample block.
 
 ### Commands
 

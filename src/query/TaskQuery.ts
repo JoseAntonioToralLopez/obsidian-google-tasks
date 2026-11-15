@@ -1,4 +1,11 @@
 import type { Task } from "../helper/types";
+import {
+	DESCENDING,
+	DUE_LOOKUP,
+	KEY_LOOKUP,
+	normalizeKeyword,
+	SORT_LOOKUP,
+} from "./locales";
 
 /**
  * Query language of the ```google-tasks code block.
@@ -8,7 +15,7 @@ import type { Task } from "../helper/types";
  *   sort: due desc                       (due | title | list) [asc | desc]
  *   limit: 10
  *
- * Spanish aliases are accepted for keys and values.
+ * Keywords are English; locales.ts adds aliases in other languages.
  */
 
 export type SortField = "due" | "title" | "list";
@@ -27,31 +34,6 @@ export interface QueryDates {
 	tomorrow: string;
 	noteDate: string; // date of the note holding the block
 }
-
-const KEY_ALIASES: Record<string, string> = {
-	list: "list", lists: "list", lista: "list", listas: "list",
-	due: "due", date: "due", fecha: "due",
-	sort: "sort", order: "sort", orden: "sort",
-	limit: "limit", limite: "limit",
-};
-
-const DUE_ALIASES: Record<string, string> = {
-	today: "today", hoy: "today",
-	tomorrow: "tomorrow", manana: "tomorrow",
-	overdue: "overdue", atrasadas: "overdue", atrasada: "overdue", vencidas: "overdue",
-	none: "none", "no-date": "none", "sin-fecha": "none", "sin fecha": "none",
-	note: "note", nota: "note",
-	any: "any", all: "any", todas: "any", cualquiera: "any",
-};
-
-const SORT_ALIASES: Record<string, SortField> = {
-	due: "due", date: "due", fecha: "due",
-	title: "title", titulo: "title",
-	list: "list", lista: "list",
-};
-
-const normalize = (text: string): string =>
-	text.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 const splitValues = (value: string): string[] =>
 	value
@@ -79,7 +61,7 @@ export function parseTaskQuery(source: string): TaskQuery {
 			continue;
 		}
 
-		const key = KEY_ALIASES[normalize(line.substring(0, separator))];
+		const key = KEY_LOOKUP[normalizeKeyword(line.substring(0, separator))];
 		const value = line.substring(separator + 1).trim();
 
 		switch (key) {
@@ -88,19 +70,19 @@ export function parseTaskQuery(source: string): TaskQuery {
 				break;
 			case "due":
 				for (const part of splitValues(value)) {
-					const due = DUE_ALIASES[normalize(part)] ?? part;
-					if (DUE_ALIASES[normalize(part)] || /^\d{4}-\d{2}-\d{2}$/.test(part)) {
-						query.due.push(due);
+					const keyword = DUE_LOOKUP[normalizeKeyword(part)];
+					if (keyword || /^\d{4}-\d{2}-\d{2}$/.test(part)) {
+						query.due.push(keyword ?? part);
 					} else {
 						query.errors.push(`Unknown due value "${part}"`);
 					}
 				}
 				break;
 			case "sort": {
-				const [field, direction] = normalize(value).split(/\s+/);
-				if (SORT_ALIASES[field]) {
-					query.sortBy = SORT_ALIASES[field];
-					query.sortDesc = direction === "desc";
+				const [field, direction] = normalizeKeyword(value).split(/\s+/);
+				if (SORT_LOOKUP[field]) {
+					query.sortBy = SORT_LOOKUP[field];
+					query.sortDesc = DESCENDING.has(direction);
 				} else {
 					query.errors.push(`Unknown sort field "${value}"`);
 				}
@@ -125,7 +107,7 @@ export function parseTaskQuery(source: string): TaskQuery {
 
 export const listMatches = (query: TaskQuery, listTitle: string): boolean =>
 	query.lists.length === 0 ||
-	query.lists.some((name) => normalize(name) === normalize(listTitle));
+	query.lists.some((name) => normalizeKeyword(name) === normalizeKeyword(listTitle));
 
 /** Due dates are stored at noon UTC by ListAllTasks, so the date part is safe to read. */
 export const taskDueDate = (task: Task): string =>
