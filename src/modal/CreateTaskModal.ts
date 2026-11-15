@@ -88,9 +88,19 @@ export class CreateTaskModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		if(this.editor){
-			const cursor = this.editor.getCursor();
-			this.editor.setLine(cursor.line, taskToList(this.createdTask) )
+		// Nothing to insert if the modal was cancelled or the request failed
+		if (this.editor && this.createdTask) {
+			const line = this.editor.getCursor().line;
+			const taskLine = taskToList(this.createdTask);
+			if (this.editor.getLine(line).trim() === "") {
+				this.editor.setLine(line, taskLine);
+			} else {
+				// Keep the existing text and add the task on the next line
+				this.editor.replaceRange("\n" + taskLine.trimEnd(), {
+					line,
+					ch: this.editor.getLine(line).length,
+				});
+			}
 		}
 
 	}
