@@ -30,9 +30,7 @@
 		"typescript": "4.4.4"
 	},
 	"dependencies": {
-		"clipboardy": "^3.0.0",
 		"google-auth-library": "^7.14.1",
-		"long-press-event": "^2.4.4",
 		"open": "^8.4.0",
 		"server-destroy": "^1.0.1",
 		"ts-treemap": "^1.1.0"
