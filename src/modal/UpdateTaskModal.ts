@@ -1,7 +1,7 @@
-import { DropdownComponent, Modal, Setting, moment } from "obsidian";
+import { DropdownComponent, Modal, Notice, Setting, moment } from "obsidian";
 import { customSetting } from "../helper/CustomSettingElement";
 import type GoogleTasks from "../GoogleTasksPlugin";
-import { getListId } from "../view/GoogleTaskView";
+import { getListId, GoogleTaskView, VIEW_TYPE_GOOGLE_TASK } from "../view/GoogleTaskView";
 import { getAllTaskLists } from "../googleApi/ListAllTasks";
 import type { Task } from "../helper/types";
 import { CreateGoogleTaskFromOldTask } from "src/googleApi/GoogleCreateTask";
@@ -82,10 +82,22 @@ export class UpdateTaskModal extends Modal {
 		const buttonContainer = contentEl.createDiv({cls:"googleButtonContainer"});
 
 		new Setting(buttonContainer).addButton((button) =>
-			button.setButtonText("Update Categorie").onClick(() => {
-				CreateGoogleTaskFromOldTask(this.plugin, this.newTask);
-				DeleteGoogleTask(this.plugin, this.oldTaskSelfLInk, false);
+			button.setButtonText("Update Categorie").onClick(async () => {
 				this.close();
+				// Only remove the original once the copy exists in the new list
+				const created = await CreateGoogleTaskFromOldTask(this.plugin, this.newTask);
+				if (!created) {
+					new Notice("Could not move the task, the original was kept");
+					return;
+				}
+				await DeleteGoogleTask(this.plugin, this.oldTaskSelfLInk, false);
+				this.plugin.app.workspace
+					.getLeavesOfType(VIEW_TYPE_GOOGLE_TASK)
+					.forEach((leaf) => {
+						if (leaf.view instanceof GoogleTaskView) {
+							leaf.view.onOpen();
+						}
+					});
 			})
 		);
 

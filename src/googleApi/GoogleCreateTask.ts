@@ -60,7 +60,7 @@ export async function CreateGoogleTask(
 export async function CreateGoogleTaskFromOldTask(
 	plugin: GoogleTasks,
 	newTask: Task
-) {
+): Promise<boolean> {
 	const requestHeaders: HeadersInit = new Headers();
 	requestHeaders.append(
 		"Authorization",
@@ -95,8 +95,10 @@ export async function CreateGoogleTaskFromOldTask(
 						leaf.view.onOpen();
 					}
 				});
+			return true;
 		}
 	} catch (error) {
 		console.error(error);
 	}
+	return false;
 }
