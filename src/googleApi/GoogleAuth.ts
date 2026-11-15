@@ -71,10 +71,13 @@ export async function LoginGoogle(plugin: GoogleTasks) {
 			plugin.settings.googleClientSecret,
 			"http://127.0.0.1:42813/callback"
 		);
+		// Random value echoed back by Google, so a callback we did not start is rejected
+		const state = require("crypto").randomBytes(32).toString("hex");
 		const authorizeUrl = oAuth2Client.generateAuthUrl({
 			scope: "https://www.googleapis.com/auth/tasks",
 			access_type: "offline",
-			prompt: "consent"
+			prompt: "consent",
+			state,
 		});
 
 		const server = http
@@ -87,6 +90,13 @@ export async function LoginGoogle(plugin: GoogleTasks) {
 							"http://localhost:42813"
 						).searchParams;
 						const code = qs.get("code");
+						if (!code || qs.get("state") !== state) {
+							res.statusCode = 400;
+							res.end("Authentication failed. Please try again from obsidian.");
+							server.destroy();
+							new Notice("Google Tasks: login was cancelled or rejected");
+							return;
+						}
 						res.end(
 							"Authentication successful! Please return to obsidian."
 						);
@@ -105,7 +115,8 @@ export async function LoginGoogle(plugin: GoogleTasks) {
 					console.error("Error getting Tokens.");
 				}
 			})
-			.listen(42813, () => {
+			// Loopback only: the callback must not be reachable from the network
+			.listen(42813, "127.0.0.1", () => {
 				// open the browser to the authorize url to start the workflow
 				open(authorizeUrl, { wait: false }).then((cp: any) =>
 					cp.unref()
@@ -113,6 +124,15 @@ export async function LoginGoogle(plugin: GoogleTasks) {
 			});
 
 		destroyer(server);
+
+		server.on("error", (error: any) => {
+			console.error("Google Tasks: login server error", error.code);
+			new Notice("Google Tasks: could not start the login (port 42813 in use?)");
+		});
+
+		// Do not leave the port open if the login is never finished
+		const loginTimeout = setTimeout(() => server.destroy(), 5 * 60 * 1000);
+		server.on("close", () => clearTimeout(loginTimeout));
 	} else {
 		new Notice("Can't use OAuth on this device");
 	}
