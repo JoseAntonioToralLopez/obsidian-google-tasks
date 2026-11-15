@@ -44,15 +44,16 @@ export class GoogleTasksSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("ClientSecret")
 			.setDesc("Google client secret")
-			.addText((text) =>
+			.addText((text) => {
+				text.inputEl.type = "password";
 				text
 					.setPlaceholder("Enter your client secret")
 					.setValue(this.plugin.settings.googleClientSecret)
 					.onChange(async (value) => {
-						this.plugin.settings.googleClientSecret = value;
+						this.plugin.settings.googleClientSecret = value.trim();
 						await this.plugin.saveSettings();
-					})
-			);
+					});
+			});
 
 		const AuthSetting = new Setting(containerEl);
 
@@ -115,15 +116,17 @@ export class GoogleTasksSettingTab extends PluginSettingTab {
 			new Setting(containerEl)
 				.setName("Refresh Token")
 				.setDesc("Google Refresh Token from OAuth")
-				.addText((text) =>
+				.addText((text) => {
+					text.inputEl.type = "password";
+					// The stored token is never shown again, only replaced
 					text
-						.setPlaceholder("Enter refresh token")
-						.setValue(this.plugin.settings.googleRefreshToken)
+						.setPlaceholder(getRT() ? "Saved. Paste to replace" : "Enter refresh token")
 						.onChange(async (value) => {
-							this.plugin.settings.googleRefreshToken = value;
-							setRT(value);
-						})
-				);
+							if (value.trim()) {
+								setRT(value.trim());
+							}
+						});
+				});
 		}
 
 		new Setting(containerEl)

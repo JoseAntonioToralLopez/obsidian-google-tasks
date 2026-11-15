@@ -36,6 +36,10 @@ Manage your Google Tasks from inside Obsidian
 -   add the keys into the fields under the plugin settings
 -   Press Login
 
+### Where the login is stored
+
+On Obsidian 1.11.4 or newer the refresh token, the access token and the client secret are kept in Obsidian's secret storage instead of `localStorage` and `data.json`. Values left there by older versions are moved automatically the first time the plugin loads. Secret storage is not synced between devices, so the client secret and the refresh token have to be entered once on every device. Older Obsidian versions keep using the previous storage.
+
 ### Using the plugin on Mobile (work around)
 
 -   Login on a desktop device

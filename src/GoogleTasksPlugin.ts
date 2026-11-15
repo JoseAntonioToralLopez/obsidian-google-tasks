@@ -1,4 +1,11 @@
-import { getRT } from './helper/LocalStorage';
+import {
+	getClientSecret,
+	getRT,
+	hasSecretStorage,
+	initTokenStore,
+	setClientSecret,
+	setRT,
+} from './helper/LocalStorage';
 import { Editor, MarkdownView, Plugin, WorkspaceLeaf, moment, Notice, TFile } from "obsidian";
 import type { GoogleTasksSettings } from "./helper/types";
 import { getAllUncompletedTasksOrderdByDue, getOneTaskById } from "./googleApi/ListAllTasks";
@@ -91,6 +98,7 @@ export default class GoogleTasks extends Plugin {
 	};
 
 	async onload() {
+		initTokenStore(this.app);
 		await this.loadSettings();
 		this.plugin = this;
 		this.app.workspace.onLayoutReady(this.onLayoutReady);
@@ -304,9 +312,39 @@ export default class GoogleTasks extends Plugin {
 			DEFAULT_SETTINGS,
 			await this.loadData()
 		);
+
+		// Older versions (and the mobile settings) left the refresh token in data.json
+		if (this.settings.googleRefreshToken) {
+			if (!getRT()) {
+				setRT(this.settings.googleRefreshToken);
+			}
+			this.settings.googleRefreshToken = "";
+			await this.saveSettings();
+		}
+
+		// With secret storage the client secret lives there and only in memory here
+		if (hasSecretStorage()) {
+			if (this.settings.googleClientSecret) {
+				await this.saveSettings();
+			} else {
+				this.settings.googleClientSecret = getClientSecret();
+			}
+		}
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
+		const data = { ...this.settings, googleRefreshToken: "" };
+
+		if (hasSecretStorage()) {
+			if (getClientSecret() !== this.settings.googleClientSecret) {
+				setClientSecret(this.settings.googleClientSecret);
+			}
+			// Only drop it from data.json once it is really in the secret storage
+			if (getClientSecret() === this.settings.googleClientSecret) {
+				data.googleClientSecret = "";
+			}
+		}
+
+		await this.saveData(data);
 	}
 }
